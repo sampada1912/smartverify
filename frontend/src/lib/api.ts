@@ -18,7 +18,20 @@ import {
   UserRole,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+function getApiBaseUrl(): string {
+  let raw = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  raw = raw.trim();
+  if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
+    raw = `https://${raw}`;
+  }
+  raw = raw.replace(/\/+$/, "");
+  if (!raw.endsWith("/api/v1")) {
+    raw = `${raw}/api/v1`;
+  }
+  return raw;
+}
+
+const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {

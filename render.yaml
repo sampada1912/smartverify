@@ -1,0 +1,71 @@
+# Render Infrastructure as Code (Blueprint) for AICTE SmartVerify (SIH26261 MVP)
+# Docs: https://render.com/docs/blueprint-spec
+
+databases:
+  - name: smartverify-db
+    databaseName: smartverify
+    user: smartverify
+    plan: free
+    region: oregon
+    version: 16
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. FastAPI Python Backend Service
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: smartverify-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python seed_demo_data.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartverify-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 1440
+      - key: UPLOAD_DIR
+        value: ../data/uploads
+      - key: SYNTHETIC_DATA_DIR
+        value: ../data/synthetic
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 25
+      - key: ALLOWED_EXTENSIONS
+        value: pdf,png,jpg,jpeg,csv
+      - key: OCR_ENGINE
+        value: pymupdf_fallback
+      - key: CORS_ORIGINS
+        value: "*"
+
+  # ---------------------------------------------------------------------------
+  # 2. Next.js Frontend Service
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: smartverify-frontend
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: smartverify-backend
+          envVarKey: RENDER_EXTERNAL_HOSTNAME

@@ -35,13 +35,23 @@ app = FastAPI(
 )
 
 # Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Allow all for hackathon local dev flexibility
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_origins = settings.cors_origins_list
+if "*" in cors_origins or not cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"^https?://.*",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Register API v1 Routers
 API_V1_PREFIX = "/api/v1"
@@ -60,11 +70,23 @@ app.include_router(demo_router, prefix=API_V1_PREFIX)
 
 @app.get("/health", tags=["System"])
 def health_check():
+    db_connected = False
+    db_dialect = "unknown"
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_connected = True
+        db_dialect = engine.dialect.name
+    except Exception:
+        db_connected = False
+
     return {
-        "status": "HEALTHY",
+        "status": "HEALTHY" if db_connected else "DEGRADED",
         "system": "AICTE SmartVerify MVP",
         "version": "1.0.0-PROTOTYPE",
-        "database": settings.DATABASE_URL.split(":")[0],
+        "database": db_dialect,
+        "database_connected": db_connected,
         "environment": settings.ENVIRONMENT
     }
 

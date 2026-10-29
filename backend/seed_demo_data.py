@@ -54,14 +54,25 @@ from app.services.pdf_generator import (
 )
 
 
-def seed_database():
-    print("Initializing Database tables...")
-    Base.metadata.drop_all(bind=engine)
+def seed_database(drop_existing: bool = False):
+    print("Verifying database schema...")
+    if drop_existing:
+        print("Dropping and recreating database tables (--drop specified)...")
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     os.makedirs(settings.SYNTHETIC_DATA_DIR, exist_ok=True)
+
+    try:
+        user_count = db.query(User).count()
+        if user_count > 0 and not drop_existing:
+            print(f"Database already contains {user_count} users. Preserving existing data and skipping seed.")
+            db.close()
+            return
+    except Exception as e:
+        print(f"Note on existing tables check: {e}. Proceeding with seed.")
 
     print("1. Seeding Users...")
     users = [
@@ -841,4 +852,5 @@ def seed_database():
 
 
 if __name__ == "__main__":
-    seed_database()
+    drop = "--drop" in sys.argv or "--force" in sys.argv
+    seed_database(drop_existing=drop)

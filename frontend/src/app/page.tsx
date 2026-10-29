@@ -50,7 +50,7 @@ export default function DashboardOverviewPage() {
   if (!stats) {
     return (
       <div className="p-8 text-center text-slate-500 bg-white rounded-lg border border-slate-200">
-        Unable to load dashboard metrics. Verify that backend is running at http://localhost:8000.
+        Unable to load dashboard metrics. Verify that the backend service is running and accessible.
       </div>
     );
   }
