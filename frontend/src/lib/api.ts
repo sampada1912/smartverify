@@ -18,17 +18,43 @@ import {
   UserRole,
 } from "./types";
 
+function formatApiUrl(url: string): string {
+  let cleaned = url.trim();
+  if (!cleaned.startsWith("http://") && !cleaned.startsWith("https://")) {
+    cleaned = `https://${cleaned}`;
+  }
+  cleaned = cleaned.replace(/\/+$/, "");
+  if (!cleaned.endsWith("/api/v1")) {
+    cleaned = `${cleaned}/api/v1`;
+  }
+  return cleaned;
+}
+
 function getApiBaseUrl(): string {
-  let raw = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-  raw = raw.trim();
-  if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
-    raw = `https://${raw}`;
+  // 1. Check runtime localStorage override in browser
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("smartverify_api_url");
+    if (saved && saved.trim()) {
+      return formatApiUrl(saved);
+    }
   }
-  raw = raw.replace(/\/+$/, "");
-  if (!raw.endsWith("/api/v1")) {
-    raw = `${raw}/api/v1`;
+
+  // 2. Check build-time environment variable
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim() && !envUrl.includes("localhost")) {
+    return formatApiUrl(envUrl);
   }
-  return raw;
+
+  // 3. Dynamic domain pairing on Render (e.g. smartverify-frontend -> smartverify-backend)
+  if (typeof window !== "undefined" && window.location.hostname.includes("onrender.com")) {
+    const hostname = window.location.hostname;
+    if (hostname.includes("smartverify-frontend")) {
+      const backendHost = hostname.replace("smartverify-frontend", "smartverify-backend");
+      return `https://${backendHost}/api/v1`;
+    }
+  }
+
+  return formatApiUrl(envUrl || "http://localhost:8000/api/v1");
 }
 
 const API_BASE = getApiBaseUrl();
