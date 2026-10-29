@@ -7,7 +7,7 @@ databases:
     user: smartverify
     plan: free
     region: oregon
-    version: 16
+    postgresMajorVersion: "16"
 
 services:
   # ---------------------------------------------------------------------------
